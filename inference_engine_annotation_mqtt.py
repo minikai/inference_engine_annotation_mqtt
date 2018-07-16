@@ -146,7 +146,7 @@ def query_prediction():
                         print(' ')
                         print('post to grafana json is :')
                         print(jsonData_json)
-                        jsonData['timeEnd'] = ' '
+                        jsonData_107['timeEnd'] = ' '
                         jsonData_107_alert_times = 0
                         return jsonify({'message': predict_success4, 'results': predict_data})
                     else :
@@ -176,7 +176,7 @@ def query_prediction():
                     print(' ')
                     print('post to grafana json is :')
                     print(jsonData_json)
-                    jsonData['timeEnd']=' '
+                    jsonData_107['timeEnd']=' '
                     jsonData_107_alert_times = 0
                     return jsonify({'message': predict_success4 ,'results':predict_data})
                 else :
@@ -240,7 +240,7 @@ def query_prediction():
                         print(' ')
                         print('post to grafana json is :')
                         print(jsonData_json)
-                        jsonData['timeEnd'] = ' '
+                        jsonData_106['timeEnd'] = ' '
                         jsonData_106_alert_times = 0
                         return jsonify({'message': predict_success4, 'results': predict_data})
                     else :
@@ -270,7 +270,7 @@ def query_prediction():
                     print(' ')
                     print('post to grafana json is :')
                     print(jsonData_json)
-                    jsonData['timeEnd'] = ' '
+                    jsonData_106['timeEnd'] = ' '
                     jsonData_106_alert_times = 0
                     return jsonify({'message': predict_success4, 'results': predict_data})
                 else:
