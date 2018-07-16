@@ -24,9 +24,11 @@ import time
 
 jsonData_107 ={}
 jsonData_107['timeEnd'] =' '
+jsonData_107_alert_times = 0
 
 jsonData_106 ={}
 jsonData_106['timeEnd'] =' '
+jsonData_106_alert_times = 0
 
 app = Flask(__name__)
 
@@ -36,16 +38,21 @@ app = Flask(__name__)
 def query_prediction():
     global jsonData_107
     global jsonData_106
+    global jsonData_107_alert_times
+    global jsonData_106_alert_times
     ## Step 1, read the source data
     
     if request.method == 'POST':
         data=request.get_json(force=True)
         input_data = data['data']
         model_name = data["model_name"]
-        print('===============================================================================')
-        print('This time input json :')
-        print(data)
-        print(' ')
+        if data['tags'] == '1Y520210107' or data['tags'] == '1Y520210106' :
+            print('===============================================================================')
+            print('This time input json :')
+            print(data)
+            print(' ')
+        else:
+            pass
 
     X_ret = read_sample_db(input_data)
     
@@ -62,12 +69,15 @@ def query_prediction():
         # predict_data = load_sample_model('/inference_engine/models/'+model_name+'.pkl', X_ret)
     elif(os.path.exists('/inference_engine/models/'+model_name+'.pkl')==True):
         predict_data = load_sample_xgbmodel('/inference_engine/models/'+model_name+'.pkl', X_ret)
-        print('predict answer :')
-        print(predict_data)
-        print('              ')
-        print('data point:')
-        print(data['tags'])
-        print(' ')
+        if data['tags'] == '1Y520210107' or data['tags'] == '1Y520210106' :
+            print('predict answer :')
+            print(predict_data)
+            print('              ')
+            print('data point:')
+            print(data['tags'])
+            print(' ')
+        else:
+            pass
     
     ## Step3, write the predicted data into destination
     
@@ -102,6 +112,7 @@ def query_prediction():
                     print('predict success(1): This Data is first predict answer = [-1] Data')
                     print(jsonData_107)
                     annotation_times_mqtt(data['tags'])
+                    jsonData_107_alert_times = 1
                     return jsonify({'message': 'predict success(1)','results':predict_data})
 
             ##判斷是否為正常並且是第一筆資料或為連續的正常資料，如是就不記
@@ -113,9 +124,35 @@ def query_prediction():
                 elif data['text'] == '[-1]' and jsonData_107['timeEnd'] != ' ' :
                     jsonData_107['timeEnd']= data['timeEnd']
                     annotation_times_mqtt(data['tags'])
-                    print('predict success(3): Last predict answer and this time predict answer is [-1] too')
-                    print(jsonData_107)
-                    return jsonify({'message': 'predict success(3)','results':predict_data})
+                    jsonData_107_alert_times = jsonData_107_alert_times + 1
+                    if jsonData_107_alert_times > 4 :
+                        header = {}
+                        jsonData_107['dashboardId'] = data['dashboardId']
+                        jsonData_107['panelId'] = data['panelId']
+                        jsonData_107['isRegion'] = True
+                        # jsonData['tags']= data['tags']
+                        jsonData_107['text'] = '[-1]'
+                        url = data['url']
+                        header['Content-Type'] = 'application/json'
+                        header['Accept'] = 'application/json'
+                        user = data['user']
+                        password = data['password']
+                        header['Authorization'] = encode_base64(user, password)
+                        jsonData_json = json.dumps(jsonData_107)
+                        rsp = requests.post(url, headers=header, data=jsonData_json, verify=False)
+                        status_code = str(rsp.status_code)
+                        predict_success4 = 'predict success(4)' + ' grafana status code ' + status_code
+                        print(predict_success4)
+                        print(' ')
+                        print('post to grafana json is :')
+                        print(jsonData_json)
+                        jsonData['timeEnd'] = ' '
+                        jsonData_107_alert_times = 0
+                        return jsonify({'message': predict_success4, 'results': predict_data})
+                    else :
+                        print('predict success(3): Last predict answer and this time predict answer is [-1] too')
+                        print(jsonData_107)
+                        return jsonify({'message': 'predict success(3)','results':predict_data})
 
             ##判斷是否中斷了連續標註異常的資料，如是就把之前更新的annotation資訊送出
                 elif data['text'] == '[1]' and jsonData_107['timeEnd'] != ' ' :
@@ -140,6 +177,7 @@ def query_prediction():
                     print('post to grafana json is :')
                     print(jsonData_json)
                     jsonData['timeEnd']=' '
+                    jsonData_107_alert_times = 0
                     return jsonify({'message': predict_success4 ,'results':predict_data})
                 else :
                     return 'json error',404
@@ -168,6 +206,7 @@ def query_prediction():
                     print('predict success(1): This Data is first predict answer = [-1] Data')
                     print(jsonData_106)
                     annotation_times_mqtt(data['tags'])
+                    jsonData_106_alert_times = 1
                     return jsonify({'message': 'predict success(1)', 'results': predict_data})
 
                     ##判斷是否為正常並且是第一筆資料或為連續的正常資料，如是就不記
@@ -179,9 +218,35 @@ def query_prediction():
                 elif data['text'] == '[-1]' and jsonData_106['timeEnd'] != ' ':
                     jsonData_106['timeEnd'] = data['timeEnd']
                     annotation_times_mqtt(data['tags'])
-                    print('predict success(3): Last predict answer and this time predict answer is [-1] too')
-                    print(jsonData_106)
-                    return jsonify({'message': 'predict success(3)', 'results': predict_data})
+                    jsonData_106_alert_times = jsonData_106_alert_times + 1
+                    if jsonData_106_alert_times > 4 :
+                        header = {}
+                        jsonData_106['dashboardId'] = data['dashboardId']
+                        jsonData_106['panelId'] = data['panelId']
+                        jsonData_106['isRegion'] = True
+                        # jsonData['tags']= data['tags']
+                        jsonData_106['text'] = '[-1]'
+                        url = data['url']
+                        header['Content-Type'] = 'application/json'
+                        header['Accept'] = 'application/json'
+                        user = data['user']
+                        password = data['password']
+                        header['Authorization'] = encode_base64(user, password)
+                        jsonData_json = json.dumps(jsonData_106)
+                        rsp = requests.post(url, headers=header, data=jsonData_json, verify=False)
+                        status_code = str(rsp.status_code)
+                        predict_success4 = 'predict success(4)' + ' grafana status code ' + status_code
+                        print(predict_success4)
+                        print(' ')
+                        print('post to grafana json is :')
+                        print(jsonData_json)
+                        jsonData['timeEnd'] = ' '
+                        jsonData_106_alert_times = 0
+                        return jsonify({'message': predict_success4, 'results': predict_data})
+                    else :
+                        print('predict success(3): Last predict answer and this time predict answer is [-1] too')
+                        print(jsonData_106)
+                        return jsonify({'message': 'predict success(3)','results':predict_data})
 
                     ##判斷是否中斷了連續標註異常的資料，如是就把之前更新的annotation資訊送出
                 elif data['text'] == '[1]' and jsonData_106['timeEnd'] != ' ':
@@ -206,6 +271,7 @@ def query_prediction():
                     print('post to grafana json is :')
                     print(jsonData_json)
                     jsonData['timeEnd'] = ' '
+                    jsonData_106_alert_times = 0
                     return jsonify({'message': predict_success4, 'results': predict_data})
                 else:
                     return 'json error', 404
