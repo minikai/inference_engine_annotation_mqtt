@@ -22,8 +22,11 @@ import paho.mqtt.client as paho
 import time
 
 
-jsonData ={}
-jsonData['timeEnd'] =' '
+jsonData_107 ={}
+jsonData_107['timeEnd'] =' '
+
+jsonData_106 ={}
+jsonData_106['timeEnd'] =' '
 
 app = Flask(__name__)
 
@@ -31,14 +34,19 @@ app = Flask(__name__)
 
 @app.route("/predict", methods=['POST'])
 def query_prediction():
-    global jsonData
+    global jsonData_107
+    global jsonData_106
     ## Step 1, read the source data
     
     if request.method == 'POST':
-        data=request.get_json()
+        data=request.get_json(force=True)
         input_data = data['data']
         model_name = data["model_name"]
-    
+        print('===============================================================================')
+        print('This time input json :')
+        print(data)
+        print(' ')
+
     X_ret = read_sample_db(input_data)
     
     ## Step2, load model and start to predict
@@ -50,80 +58,162 @@ def query_prediction():
         print('Error 404 : model C:\inference_engine\models\{0}.pkl not found'.format(model_name))
         return jsonify(message), 404
     
+    # elif(os.path.exists('/inference_engine/models/'+model_name+'.pkl')==True):
+        # predict_data = load_sample_model('/inference_engine/models/'+model_name+'.pkl', X_ret)
     elif(os.path.exists('/inference_engine/models/'+model_name+'.pkl')==True):
-        predict_data = load_sample_model('/inference_engine/models/'+model_name+'.pkl', X_ret)
+        predict_data = load_sample_xgbmodel('/inference_engine/models/'+model_name+'.pkl', X_ret)
+        print('predict answer :')
+        print(predict_data)
+        print('              ')
+        print('data point:')
+        print(data['tags'])
+        print(' ')
     
     ## Step3, write the predicted data into destination
     
         write_model_info(predict_data , model_name)
-        print('predict success')
-        print(jsonData)
+
         #return jsonify({'message': 'predict success'})
     ##判斷是否有啟用annotation模式
         data['text'] = predict_data
         if data['annotation_enable'] == 0 :
     ##判斷是否被標註為異常並且是第一筆資料，如是就初始化所有的資訊
+            if data['tags'] == '1Y520210107':
+                if data['text'] == '[-1]' and jsonData_107['timeEnd'] ==' ' :
+                    header = {}
+                    jsonData_107 = {}
+                    jsonData_107['dashboardId']= data['dashboardId']
+                    jsonData_107['panelId']= data['panelId']
+                    jsonData_107['time']= data['time']
+                    jsonData_107['isRegion']= True
+                    jsonData_107['timeEnd']= data['timeEnd']
+                    tags_list= []
+                    tags_list.append('ErrorCode:-1') #ErrorCode:-1 # TODO: should be dymanic in next version
+                    tags_list.append(data['tags'])
+                    #tags_list_json = json.dumps(tags_list)
+                    jsonData_107['tags']= tags_list
+                    jsonData_107['text']= data['text']
+                    url = data['url']
+                    header['Content-Type']= 'application/json'
+                    header['Accept']= 'application/json'
+                    user = data['user']
+                    password = data['password']
+                    header['Authorization'] =   encode_base64(user,password)
+                    print('predict success(1): This Data is first predict answer = [-1] Data')
+                    print(jsonData_107)
+                    annotation_times_mqtt(data['tags'])
+                    return jsonify({'message': 'predict success(1)','results':predict_data})
 
-            if data['text'] == '[-1]' and jsonData['timeEnd'] ==' ' :
-                header = {}
-                jsonData = {}
-                jsonData['dashboardId']= data['dashboardId']
-                jsonData['panelId']= data['panelId']
-                jsonData['time']= data['time']
-                jsonData['isRegion']= True
-                jsonData['timeEnd']= data['timeEnd']
-                tags_list= []
-                tags_list.append(str(predict_data))
-                tags_list.append(data['tags'])
-                #tags_list_json = json.dumps(tags_list)
-                jsonData['tags']= tags_list
-                jsonData['text']= data['text']
-                url = data['url']
-                header['Content-Type']= 'application/json'
-                header['Accept']= 'application/json'
-                user = data['user']
-                password = data['password']
-                header['Authorization'] =   encode_base64(user,password)
-                annotation_times_mqtt()
-                return jsonify({'message': 'predict success(1)'})
+            ##判斷是否為正常並且是第一筆資料或為連續的正常資料，如是就不記
+                elif data['text'] == '[1]' and jsonData_107['timeEnd'] == ' ' :
+                    print('predict success(2): This Data is first predict answer = [1] or last predict answer and this time predict answer = [1]')
+                    return jsonify({'message': 'predict success(2)','results':predict_data})
 
-        ##判斷是否為正常並且是第一筆資料或為連續的正常資料，如是就不記
-            elif data['text'] == '[1]' and jsonData['timeEnd'] == ' ' :
-                return jsonify({'message': 'predict success(2)'})
+            ##判斷是否為連續標註異常的資料，如是就更新timeEnd
+                elif data['text'] == '[-1]' and jsonData_107['timeEnd'] != ' ' :
+                    jsonData_107['timeEnd']= data['timeEnd']
+                    annotation_times_mqtt(data['tags'])
+                    print('predict success(3): Last predict answer and this time predict answer is [-1] too')
+                    print(jsonData_107)
+                    return jsonify({'message': 'predict success(3)','results':predict_data})
 
-        ##判斷是否為連續標註異常的資料，如是就更新timeEnd
-            elif data['text'] == '[-1]' and jsonData['timeEnd'] != ' ' :
-                jsonData['timeEnd']= data['timeEnd']
-                annotation_times_mqtt()
-                return jsonify({'message': 'predict success(3)'})
+            ##判斷是否中斷了連續標註異常的資料，如是就把之前更新的annotation資訊送出
+                elif data['text'] == '[1]' and jsonData_107['timeEnd'] != ' ' :
+                    header = {}
+                    jsonData_107['dashboardId']= data['dashboardId']
+                    jsonData_107['panelId']= data['panelId']
+                    jsonData_107['isRegion']= True
+                    #jsonData['tags']= data['tags']
+                    jsonData_107['text']= '[-1]'
+                    url = data['url']
+                    header['Content-Type']= 'application/json'
+                    header['Accept']= 'application/json'
+                    user = data['user']
+                    password = data['password']
+                    header['Authorization'] =   encode_base64(user,password)
+                    jsonData_json = json.dumps(jsonData_107)
+                    rsp = requests.post(url, headers=header, data=jsonData_json, verify=False)
+                    status_code = str(rsp.status_code)
+                    predict_success4 = 'predict success(4)'+ ' grafana status code ' +status_code
+                    print(predict_success4)
+                    print(' ')
+                    print('post to grafana json is :')
+                    print(jsonData_json)
+                    jsonData['timeEnd']=' '
+                    return jsonify({'message': predict_success4 ,'results':predict_data})
+                else :
+                    return 'json error',404
 
-        ##判斷是否中斷了連續標註異常的資料，如是就把之前更新的annotation資訊送出
-            elif data['text'] == '[1]' and jsonData['timeEnd'] != ' ' :
-                header = {}
-                jsonData['dashboardId']= data['dashboardId']
-                jsonData['panelId']= data['panelId']
-                jsonData['isRegion']= True
-                #jsonData['tags']= data['tags']
-                jsonData['text']= '[-1]'
-                url = data['url']
-                header['Content-Type']= 'application/json'
-                header['Accept']= 'application/json'
-                user = data['user']
-                password = data['password']
-                header['Authorization'] =   encode_base64(user,password)
-                jsonData_json = json.dumps(jsonData)
-                print (header)
-                print (url)
-                print (jsonData_json)
-                rsp = requests.post(url, headers=header, data=jsonData_json)
-                status_code = str(rsp.status_code)
-                predict_success4 = 'predict success(4)'+ ' grafana status code ' +status_code
-                jsonData['timeEnd']=' '
-                return jsonify({'message': predict_success4 })
+            elif data['tags'] == '1Y520210106':
+                if data['text'] == '[-1]' and jsonData_106['timeEnd'] == ' ':
+                    header = {}
+                    jsonData_106 = {}
+                    jsonData_106['dashboardId'] = data['dashboardId']
+                    jsonData_106['panelId'] = data['panelId']
+                    jsonData_106['time'] = data['time']
+                    jsonData_106['isRegion'] = True
+                    jsonData_106['timeEnd'] = data['timeEnd']
+                    tags_list = []
+                    tags_list.append('ErrorCode:-1')  # ErrorCode:-1 # TODO: should be dymanic in next version
+                    tags_list.append(data['tags'])
+                    # tags_list_json = json.dumps(tags_list)
+                    jsonData_106['tags'] = tags_list
+                    jsonData_106['text'] = data['text']
+                    url = data['url']
+                    header['Content-Type'] = 'application/json'
+                    header['Accept'] = 'application/json'
+                    user = data['user']
+                    password = data['password']
+                    header['Authorization'] = encode_base64(user, password)
+                    print('predict success(1): This Data is first predict answer = [-1] Data')
+                    print(jsonData_106)
+                    annotation_times_mqtt(data['tags'])
+                    return jsonify({'message': 'predict success(1)', 'results': predict_data})
 
-            else :
-                return 'json error',404
-        else :
+                    ##判斷是否為正常並且是第一筆資料或為連續的正常資料，如是就不記
+                elif data['text'] == '[1]' and jsonData_106['timeEnd'] == ' ':
+                    print('predict success(2): This Data is first predict answer = [1] or last predict answer and this time predict answer = [1]')
+                    return jsonify({'message': 'predict success(2)', 'results': predict_data})
+
+                    ##判斷是否為連續標註異常的資料，如是就更新timeEnd
+                elif data['text'] == '[-1]' and jsonData_106['timeEnd'] != ' ':
+                    jsonData_106['timeEnd'] = data['timeEnd']
+                    annotation_times_mqtt(data['tags'])
+                    print('predict success(3): Last predict answer and this time predict answer is [-1] too')
+                    print(jsonData_106)
+                    return jsonify({'message': 'predict success(3)', 'results': predict_data})
+
+                    ##判斷是否中斷了連續標註異常的資料，如是就把之前更新的annotation資訊送出
+                elif data['text'] == '[1]' and jsonData_106['timeEnd'] != ' ':
+                    header = {}
+                    jsonData_106['dashboardId'] = data['dashboardId']
+                    jsonData_106['panelId'] = data['panelId']
+                    jsonData_106['isRegion'] = True
+                    # jsonData['tags']= data['tags']
+                    jsonData_106['text'] = '[-1]'
+                    url = data['url']
+                    header['Content-Type'] = 'application/json'
+                    header['Accept'] = 'application/json'
+                    user = data['user']
+                    password = data['password']
+                    header['Authorization'] = encode_base64(user, password)
+                    jsonData_json = json.dumps(jsonData_106)
+                    rsp = requests.post(url, headers=header, data=jsonData_json, verify=False)
+                    status_code = str(rsp.status_code)
+                    predict_success4 = 'predict success(4)' + ' grafana status code ' + status_code
+                    print(predict_success4)
+                    print(' ')
+                    print('post to grafana json is :')
+                    print(jsonData_json)
+                    jsonData['timeEnd'] = ' '
+                    return jsonify({'message': predict_success4, 'results': predict_data})
+                else:
+                    return 'json error', 404
+            else:
+                print('post data is not 107 or 106')
+                return 'post data is not 107 or 106'
+        else:
+            print('predict succes(5)')
             return jsonify({'message': 'predict succes(5)'})
 
 
@@ -189,8 +279,17 @@ def encode_base64(username, password):
 #       print(e)
 #   return e
 
+def load_sample_xgbmodel(filepath, training_data):  
+    clf = joblib.load(filepath) 
+    training_data[np.isnan(training_data)]=0
+    training_data = pd.DataFrame(training_data,columns=clf['predictors'])
+    y_pre = clf['model'].predict(training_data)    
+    y_pre[y_pre==0]=-1
+    y_pred =y_pre[0]
+    y_pred = str(y_pre) 
+    return y_pred
 
-def annotation_times_mqtt():
+def annotation_times_mqtt(tag):
     config = configparser.ConfigParser()
     config.read('ex_config.ini')
     mqtthost = config['mqtt']['mqtthost']
@@ -201,8 +300,8 @@ def annotation_times_mqtt():
     client.username_pw_set(mqttuser, mqttpass)
     client.connect(mqtthost, 1883, 60)
     client.loop_start()
-    message = 1
-    (rc, mid) = client.publish(mqtttopic, str(message), qos=0)
+    #message = tag
+    (rc, mid) = client.publish(mqtttopic, tag, qos=0)
     client.loop_stop()
     return str(mid)
 
@@ -214,7 +313,7 @@ def annotation_times_mqtt():
 port = os.getenv('PORT', '7500')
 
 if __name__ == "__main__":
-    app.run(host = '0.0.0.0', port = int(port))
+    app.run(host = '0.0.0.0', port = int(port),debug=True)
 
 
 
