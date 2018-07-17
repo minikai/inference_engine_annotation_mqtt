@@ -147,6 +147,7 @@ def query_prediction():
                         print('post to grafana json is :')
                         print(jsonData_json)
                         jsonData_107['timeEnd'] = ' '
+                        jsonData_107['time'] = ''
                         jsonData_107_alert_times = 0
                         return jsonify({'message': predict_success4, 'results': predict_data})
                     else :
@@ -177,6 +178,7 @@ def query_prediction():
                     print('post to grafana json is :')
                     print(jsonData_json)
                     jsonData_107['timeEnd']=' '
+                    jsonData_107['time'] = ''
                     jsonData_107_alert_times = 0
                     return jsonify({'message': predict_success4 ,'results':predict_data})
                 else :
@@ -241,6 +243,7 @@ def query_prediction():
                         print('post to grafana json is :')
                         print(jsonData_json)
                         jsonData_106['timeEnd'] = ' '
+                        jsonData_106['time'] = ''
                         jsonData_106_alert_times = 0
                         return jsonify({'message': predict_success4, 'results': predict_data})
                     else :
@@ -271,16 +274,17 @@ def query_prediction():
                     print('post to grafana json is :')
                     print(jsonData_json)
                     jsonData_106['timeEnd'] = ' '
+                    jsonData_106['time'] = ''
                     jsonData_106_alert_times = 0
                     return jsonify({'message': predict_success4, 'results': predict_data})
                 else:
                     return 'json error', 404
             else:
                 print('post data is not 107 or 106')
-                return 'post data is not 107 or 106'
+                return jsonify({'message': 'predict success(5)','results':predict_data})
         else:
-            print('predict succes(5)')
-            return jsonify({'message': 'predict succes(5)'})
+            print('predict succes(6)')
+            return jsonify({'message': 'predict succes(6)'})
 
 
 
