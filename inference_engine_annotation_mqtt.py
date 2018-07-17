@@ -125,7 +125,7 @@ def query_prediction():
                     jsonData_107['timeEnd']= data['timeEnd']
                     annotation_times_mqtt(data['tags'])
                     jsonData_107_alert_times = jsonData_107_alert_times + 1
-                    if jsonData_107_alert_times > 4 :
+                    if jsonData_107_alert_times > 2 :
                         header = {}
                         jsonData_107['dashboardId'] = data['dashboardId']
                         jsonData_107['panelId'] = data['panelId']
@@ -221,7 +221,7 @@ def query_prediction():
                     jsonData_106['timeEnd'] = data['timeEnd']
                     annotation_times_mqtt(data['tags'])
                     jsonData_106_alert_times = jsonData_106_alert_times + 1
-                    if jsonData_106_alert_times > 4 :
+                    if jsonData_106_alert_times > 2 :
                         header = {}
                         jsonData_106['dashboardId'] = data['dashboardId']
                         jsonData_106['panelId'] = data['panelId']
@@ -281,7 +281,8 @@ def query_prediction():
                     return 'json error', 404
             else:
                 print('post data is not 107 or 106')
-                return jsonify({'message': 'predict success(5)','results':predict_data})
+                predict_data_not_106_or_107 = '[1]'
+                return jsonify({'message': 'predict success(5)','results':predict_data_not_106_or_107})
         else:
             print('predict succes(6)')
             return jsonify({'message': 'predict succes(6)'})
