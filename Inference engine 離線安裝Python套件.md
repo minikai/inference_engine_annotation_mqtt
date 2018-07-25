@@ -24,6 +24,6 @@ Inference engine為在霧端設備上透過Docker運行的Python runtime程式�
  
 3. 利用pip install 安裝xgboost的whl檔
 
-   ```pip inference xgboost-0.72.1-py2.py3-none-manylinux1_x86_64.whl```
+   ```pip install xgboost-0.72.1-py2.py3-none-manylinux1_x86_64.whl```
    
      ![image](https://github.com/minikai/inference_engine_annotation_mqtt/blob/master/pip%20install%20whl.png?raw=true)
