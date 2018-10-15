@@ -46,10 +46,10 @@
 
   1.	在c:\inference_engine的資料夾內放入inference_engine_annotation_mqtt.py檔及config.ini
   
-  2.	在c:\inference_engine的資料夾內建立models資料夾及results資料夾，在models放入model.pkl檔在windows cmd中輸入Docker run --name inference_python –it –p 2000:7500 -v C:\inference_engine:/inference_engine/ inference_python 
+  2.	在c:\inference_engine的資料夾內建立models資料夾及results資料夾，在models放入model.pkl檔在windows cmd中輸入Docker run --name inference_python –it –p 2000:7500 -v C:\inference_engine:/inference_engine/ bash
   
   3.	pip install sklearn flask requests numpy pandas paho-mqtt scipy
   
-  4.	python /inference_engine/inference_engine_annotation_mqtt.py
+  4.	python /inference_engine/inference_engine_annotation.py
   
   5.	利用postman打上面提供的json代在body裡，headers代”Content-Type”:” application/json”，url為127.0.0.1:2000/predict
